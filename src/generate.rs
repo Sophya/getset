@@ -167,7 +167,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     #(#doc)*
                     #[inline(always)]
                     #visibility fn #fn_name(&mut self, val: &mut #ty) -> &mut Self {
-                        self.#field_name = val;
+                        self.#field_name = val.clone();
                         self
                     }
                 }
