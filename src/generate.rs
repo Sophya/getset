@@ -157,7 +157,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
-                    #visibility fn #fn_name(&self) -> #ty {
+                    #visibility fn #fn_name(&mut self) -> #ty {
                         self.#field_name
                     }
                 }
