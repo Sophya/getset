@@ -157,8 +157,9 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
+                    #[allow(clone_on_copy)]
                     #visibility fn #fn_name(&mut self) -> #ty {
-                        self.#field_name
+                        self.#field_name.clone()
                     }
                 }
             }
