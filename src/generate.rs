@@ -3,6 +3,8 @@ use proc_macro2::{Ident, Span};
 use proc_macro_error::{abort, ResultExt};
 use syn::{self, ext::IdentExt, spanned::Spanned, Field, Lit, Meta, MetaNameValue, Visibility};
 
+use crate::extract_type_from_option::extract_type_from_option;
+
 use self::GenMode::*;
 use super::parse_attr;
 
@@ -17,6 +19,7 @@ pub enum GenMode {
     GetCopy,
     Set,
     GetMut,
+    GetExpect,
 }
 
 impl GenMode {
@@ -26,26 +29,27 @@ impl GenMode {
             GetCopy => "get_copy",
             Set => "set",
             GetMut => "get_mut",
+            GetExpect => "get_expect",
         }
     }
 
     pub fn prefix(self) -> &'static str {
         match self {
-            Get | GetCopy | GetMut => "",
+            Get | GetCopy | GetMut | GetExpect => "",
             Set => "set_",
         }
     }
 
     pub fn suffix(self) -> &'static str {
         match self {
-            Get | GetCopy | Set => "",
+            Get | GetCopy | Set | GetExpect => "",
             GetMut => "_mut",
         }
     }
 
     fn is_get(self) -> bool {
         match self {
-            GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
+            GenMode::Get | GenMode::GetCopy | GenMode::GetMut | GenMode::GetExpect => true,
             GenMode::Set => false,
         }
     }
@@ -81,7 +85,7 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
         .iter()
         .filter_map(|v| parse_attr(v, params.mode))
         .filter(|meta| {
-            ["get", "get_copy"]
+            ["get", "get_copy", "get_mut", "get_expect"]
                 .iter()
                 .any(|ident| meta.path().is_ident(ident))
         })
@@ -104,6 +108,14 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
 
     // `with_prefix` can either be on the local or global attr
     wants_prefix(&inner) || wants_prefix(&params.global_attr)
+}
+
+fn get_type(field: &Field) -> syn::Type {
+    if let Some(ty) = extract_type_from_option(&field.ty) {
+        ty.clone()
+    } else {
+        field.ty.clone()
+    }
 }
 
 pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
@@ -134,7 +146,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
             Span::call_site(),
         )
     };
-    let ty = field.ty.clone();
+    let ty = get_type(field);
 
     let doc = field.attrs.iter().filter(|v| {
         v.parse_meta()
@@ -188,6 +200,15 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     #visibility fn #fn_name(&mut self) -> &mut #ty {
                         &mut self.#field_name
                     }
+                }
+            }
+            GenMode::GetExpect => {
+                quote! {
+                  #(#doc)*
+                      #[inline(always)]
+                      #visibility fn #fn_name(&self) -> #ty {
+                          self.#field_name.expect(&format!("Could not get {}", "#fn_name"))
+                      }
                 }
             }
         },
