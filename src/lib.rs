@@ -154,6 +154,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error::{abort, abort_call_site, proc_macro_error, ResultExt};
 use syn::{spanned::Spanned, DataStruct, DeriveInput, Meta};
 
+mod extract_type_from_option;
 mod generate;
 use crate::generate::{GenMode, GenParams};
 
@@ -207,6 +208,22 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+#[proc_macro_derive(ExpectGetters, attributes(get_expect, getset))]
+#[proc_macro_error]
+pub fn expect_getters(input: TokenStream) -> TokenStream {
+    // Parse the string representation
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
+    let params = GenParams {
+        mode: GenMode::GetExpect,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetExpect),
+    };
+
+    // Build the impl
+    let gen = produce(&ast, &params);
+    // Return the generated impl
+    gen.into()
+}
+
 #[proc_macro_derive(Setters, attributes(set, getset))]
 #[proc_macro_error]
 pub fn setters(input: TokenStream) -> TokenStream {
@@ -242,6 +259,7 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
                 if !(meta.path().is_ident("get")
                     || meta.path().is_ident("get_copy")
                     || meta.path().is_ident("get_mut")
+                    || meta.path().is_ident("get_expect")
                     || meta.path().is_ident("set"))
                 {
                     abort!(meta.path().span(), "unknown setter or getter")
