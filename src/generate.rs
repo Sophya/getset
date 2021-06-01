@@ -206,8 +206,8 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                 quote! {
                   #(#doc)*
                       #[inline(always)]
-                      #visibility fn #fn_name(&self) -> #ty {
-                          self.#field_name.expect(&format!("Could not get {}", "#fn_name"))
+                      #visibility fn #fn_name(&self) -> &#ty {
+                          self.#field_name.as_ref().expect(&format!("Could not get {}", "#fn_name"))
                       }
                 }
             }

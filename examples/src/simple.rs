@@ -1,3 +1,5 @@
+use std::{ops::Deref, sync::Arc};
+
 use getset::{CopyGetters, ExpectGetters, Getters, MutGetters, Setters};
 
 #[derive(Getters, Setters, MutGetters, CopyGetters, ExpectGetters)]
@@ -16,14 +18,15 @@ where
     public: T,
 
     #[getset(get_expect = "pub")]
-    public_option: Option<T>,
+    public_option: Option<Arc<T>>,
 }
+
 impl Default for Foo<u8> {
     fn default() -> Self {
         Self {
             private: 0,
             public: 0,
-            public_option: Some(0),
+            public_option: Some(Arc::new(0)),
         }
     }
 }
@@ -37,5 +40,7 @@ pub fn main() {
     let _p = foo.public();
 
     let l = foo.public_option();
-    println!("{}", l);
+    let p = Arc::clone(l);
+    let y = p.deref() + 8;
+    println!("{}", y);
 }
