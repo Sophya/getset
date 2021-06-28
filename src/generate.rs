@@ -146,6 +146,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
             Span::call_site(),
         )
     };
+    let fn_name_string = fn_name.to_string();
     let ty = get_type(field);
 
     let doc = field.attrs.iter().filter(|v| {
@@ -207,7 +208,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                   #(#doc)*
                       #[inline(always)]
                       #visibility fn #fn_name(&self) -> &#ty {
-                          self.#field_name.as_ref().expect(&format!("Could not get {}", "#fn_name"))
+                          self.#field_name.as_ref().expect(&format!("Could not get {}", #fn_name_string))
                       }
                 }
             }
